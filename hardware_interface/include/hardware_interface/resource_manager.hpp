@@ -400,7 +400,6 @@ private:
   mutable std::recursive_mutex resource_interfaces_lock_;
   mutable std::recursive_mutex claimed_command_interfaces_lock_;
   mutable std::recursive_mutex resources_lock_;
-
   std::unique_ptr<ResourceStorage> resource_storage_;
 
   // Structure to store read and write status so it is not initialized in the real-time loop
