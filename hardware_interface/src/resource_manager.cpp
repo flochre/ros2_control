@@ -734,7 +734,6 @@ void ResourceManager::remove_controller_reference_interfaces(const std::string &
   resource_storage_->remove_command_interfaces(interface_names);
 }
 
-// CM API: Called in "callback/slow"-thread
 void ResourceManager::cache_controller_to_hardware(
   const std::string & controller_name, const std::vector<std::string> & interfaces)
 {
@@ -774,7 +773,6 @@ void ResourceManager::cache_controller_to_hardware(
   }
 }
 
-// CM API: Called in "update"-thread
 std::vector<std::string> ResourceManager::get_cached_controllers_to_hardware(
   const std::string & hardware_name)
 {
