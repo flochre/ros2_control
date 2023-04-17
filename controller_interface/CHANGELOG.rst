@@ -2,6 +2,26 @@
 Changelog for package controller_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.25.1 (2023-04-14)
+-------------------
+* Add missing build_export_depends to controller_interface (backport `#989 <https://github.com/ros-controls/ros2_control/issues/989>`_) (`#990 <https://github.com/ros-controls/ros2_control/issues/990>`_)
+* Contributors: Scott K Logan
+
+2.25.0 (2023-04-02)
+-------------------
+
+2.24.1 (2023-03-09)
+-------------------
+
+2.24.0 (2023-02-28)
+-------------------
+
+2.23.0 (2023-02-20)
+-------------------
+
+2.22.0 (2023-01-31)
+-------------------
+
 2.21.0 (2023-01-24)
 -------------------
 

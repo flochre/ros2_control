@@ -2,6 +2,31 @@
 Changelog for package hardware_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.25.1 (2023-04-14)
+-------------------
+
+2.25.0 (2023-04-02)
+-------------------
+* Check for missing hardware interfaces that use the gpio tag. (`#953 <https://github.com/ros-controls/ros2_control/issues/953>`_)
+* Split transmission interfaces (backport `#938 <https://github.com/ros-controls/ros2_control/issues/938>`_) (`#968 <https://github.com/ros-controls/ros2_control/issues/968>`_)
+* Contributors: Ryan Sandzimier, Noel Jiménez García, Bence Magyar
+
+2.24.1 (2023-03-09)
+-------------------
+* Revert "Make double parsing locale independent (`#921 <https://github.com/ros-controls/ros2_control/issues/921>`_)" (`#966 <https://github.com/ros-controls/ros2_control/issues/966>`_)
+* Contributors: Bence Magyar
+
+2.24.0 (2023-02-28)
+-------------------
+
+2.23.0 (2023-02-20)
+-------------------
+
+2.22.0 (2023-01-31)
+-------------------
+* Make double parsing locale independent (`#921 <https://github.com/ros-controls/ros2_control/issues/921>`_) (`#924 <https://github.com/ros-controls/ros2_control/issues/924>`_)
+* Contributors: Henning Kayser
+
 2.21.0 (2023-01-24)
 -------------------
 

@@ -2,6 +2,34 @@
 Changelog for package controller_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.25.1 (2023-04-14)
+-------------------
+
+2.25.0 (2023-04-02)
+-------------------
+
+2.24.1 (2023-03-09)
+-------------------
+
+2.24.0 (2023-02-28)
+-------------------
+* fix AttributeError: Parameter object attribute name is read-only (`#957 <https://github.com/ros-controls/ros2_control/issues/957>`_) (`#958 <https://github.com/ros-controls/ros2_control/issues/958>`_)
+* Expose node options to controller manager (`#942 <https://github.com/ros-controls/ros2_control/issues/942>`_) (`#946 <https://github.com/ros-controls/ros2_control/issues/946>`_)
+* Contributors: Bence Magyar, methylDragon,Noel Jiménez García
+
+2.23.0 (2023-02-20)
+-------------------
+* Adds list_hardware_components to CLI `#796 <https://github.com/ros-controls/ros2_control/issues/796>`_ - Adds list_hardware_components to CLI (`#891 <https://github.com/ros-controls/ros2_control/issues/891>`_) (`#937 <https://github.com/ros-controls/ros2_control/issues/937>`_)
+* Do not use CLI calls but direct API for setting parameters. (backport `#910 <https://github.com/ros-controls/ros2_control/issues/910>`_) (`#913 <https://github.com/ros-controls/ros2_control/issues/913>`_)
+* Contributors: Andy McEvoy, Denis Stogl
+
+2.22.0 (2023-01-31)
+-------------------
+* Optimize output of controller spawner (backport `#909 <https://github.com/ros-controls/ros2_control/issues/909>`_) (`#911 <https://github.com/ros-controls/ros2_control/issues/911>`_)
+* Namespace Loaded Controllers (`#852 <https://github.com/ros-controls/ros2_control/issues/852>`_) (`#914 <https://github.com/ros-controls/ros2_control/issues/914>`_)
+* Add diagnostics (backport `#820 <https://github.com/ros-controls/ros2_control/issues/820>`_) (`#922 <https://github.com/ros-controls/ros2_control/issues/922>`_)
+* Contributors: Bence Magyar, Denis Stogl, Tony Najjar
+
 2.21.0 (2023-01-24)
 -------------------
 * ControllerManager: catch exception by reference (`#906 <https://github.com/ros-controls/ros2_control/issues/906>`_) (`#907 <https://github.com/ros-controls/ros2_control/issues/907>`_)
