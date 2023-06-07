@@ -62,7 +62,7 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
   auto it = info_.hardware_parameters.find("mock_sensor_commands");
   if (it != info_.hardware_parameters.end())
   {
-    use_fake_sensor_command_interfaces_ = hardware_interface::parse_bool(it->second);
+    use_mock_sensor_command_interfaces_ = hardware_interface::parse_bool(it->second);
   }
   else
   {
@@ -70,7 +70,7 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
     it = info_.hardware_parameters.find("fake_sensor_commands");
     if (it != info_.hardware_parameters.end())
     {
-      use_mock_sensor_command_interfaces_ = it->second == "true" || it->second == "True";
+      use_mock_sensor_command_interfaces_ = hardware_interface::parse_bool(it->second);
       RCUTILS_LOG_WARN_NAMED(
         "mock_generic_system",
         "Parameter 'fake_sensor_commands' has been deprecated from usage. Use"
@@ -82,15 +82,28 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
     }
   }
 
-  // check if to create fake command interface for gpio
-  it = info_.hardware_parameters.find("fake_gpio_commands");
+  // check if to create mock command interface for gpio
+  it = info_.hardware_parameters.find("mock_gpio_commands");
   if (it != info_.hardware_parameters.end())
   {
-    use_fake_gpio_command_interfaces_ = hardware_interface::parse_bool(it->second);
+    use_mock_gpio_command_interfaces_ = hardware_interface::parse_bool(it->second);
   }
   else
   {
-    use_fake_gpio_command_interfaces_ = false;
+    // check if fake_gpio_commands was set instead and issue warning
+    it = info_.hardware_parameters.find("fake_gpio_commands");
+    if (it != info_.hardware_parameters.end())
+    {
+      use_mock_gpio_command_interfaces_ = hardware_interface::parse_bool(it->second);
+      RCUTILS_LOG_WARN_NAMED(
+        "mock_generic_system",
+        "Parameter 'fake_gpio_commands' has been deprecated from usage. Use"
+        "'mock_gpio_commands' instead.");
+    }
+    else
+    {
+      use_mock_gpio_command_interfaces_ = false;
+    }
   }
 
   // process parameters about state following
@@ -201,7 +214,7 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
     }
   }
   initialize_storage_vectors(
-    sensor_fake_commands_, sensor_states_, sensor_interfaces_, info_.sensors);
+    sensor_mock_commands_, sensor_states_, sensor_interfaces_, info_.sensors);
 
   // search for gpio interfaces
   for (const auto & gpio : info_.gpios)
@@ -213,10 +226,10 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
     populate_non_standard_interfaces(gpio.state_interfaces, gpio_interfaces_);
   }
 
-  // Fake gpio command interfaces
-  if (use_fake_gpio_command_interfaces_)
+  // Mock gpio command interfaces
+  if (use_mock_gpio_command_interfaces_)
   {
-    initialize_storage_vectors(gpio_fake_commands_, gpio_states_, gpio_interfaces_, info_.gpios);
+    initialize_storage_vectors(gpio_mock_commands_, gpio_states_, gpio_interfaces_, info_.gpios);
   }
   // Real gpio command interfaces
   else
@@ -296,22 +309,22 @@ std::vector<hardware_interface::CommandInterface> GenericSystem::export_command_
     }
   }
 
-  // Fake sensor command interfaces
+  // Mock sensor command interfaces
   if (use_mock_sensor_command_interfaces_)
   {
     if (!populate_interfaces(
-          info_.sensors, sensor_interfaces_, sensor_fake_commands_, command_interfaces, true))
+          info_.sensors, sensor_interfaces_, sensor_mock_commands_, command_interfaces, true))
     {
       throw std::runtime_error(
         "Interface is not found in the standard nor other list. This should never happen!");
     }
   }
 
-  // Fake gpio command interfaces (consider all state interfaces for command interfaces)
-  if (use_fake_gpio_command_interfaces_)
+  // Mock gpio command interfaces (consider all state interfaces for command interfaces)
+  if (use_mock_gpio_command_interfaces_)
   {
     if (!populate_interfaces(
-          info_.gpios, gpio_interfaces_, gpio_fake_commands_, command_interfaces, true))
+          info_.gpios, gpio_interfaces_, gpio_mock_commands_, command_interfaces, true))
     {
       throw std::runtime_error(
         "Interface is not found in the gpio list. This should never happen!");
@@ -390,13 +403,13 @@ return_type GenericSystem::read(const rclcpp::Time & /*time*/, const rclcpp::Dur
 
   if (use_mock_sensor_command_interfaces_)
   {
-    mirror_command_to_state(sensor_states_, sensor_fake_commands_);
+    mirror_command_to_state(sensor_states_, sensor_mock_commands_);
   }
 
   // do loopback on all gpio interfaces
-  if (use_fake_gpio_command_interfaces_)
+  if (use_mock_gpio_command_interfaces_)
   {
-    mirror_command_to_state(gpio_states_, gpio_fake_commands_);
+    mirror_command_to_state(gpio_states_, gpio_mock_commands_);
   }
   else
   {
