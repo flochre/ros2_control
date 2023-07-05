@@ -1003,11 +1003,7 @@ TEST_F(TestGenericSystem, generic_system_2dof_sensor)
   ASSERT_EQ(0.33, j2p_c.get_value());
 }
 
-<<<<<<< HEAD
-void test_generic_system_with_mock_sensor_commands(std::string urdf)
-=======
 void TestGenericSystem::test_generic_system_with_mock_sensor_commands(const std::string & urdf)
->>>>>>> [MockHardware] Use consequently 'mock' instead of 'fake'. (backport #1026) – And deprecate parameters. (#1051)
 {
   hardware_interface::ResourceManager rm(urdf);
   // Activate components to get all interfaces available

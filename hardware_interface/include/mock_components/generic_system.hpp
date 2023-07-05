@@ -108,11 +108,7 @@ private:
     std::vector<std::string> & interfaces, std::vector<std::vector<double>> & storage,
     std::vector<InterfaceType> & target_interfaces, bool using_state_interfaces);
 
-<<<<<<< HEAD
-  bool use_fake_gpio_command_interfaces_;
-=======
   bool use_mock_gpio_command_interfaces_;
->>>>>>> [MockHardware] Use consequently 'mock' instead of 'fake'. (backport #1026) – And deprecate parameters. (#1051)
   bool use_mock_sensor_command_interfaces_;
 
   double position_state_following_offset_;
