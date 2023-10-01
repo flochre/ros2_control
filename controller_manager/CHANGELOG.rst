@@ -2,6 +2,45 @@
 Changelog for package controller_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.31.0 (2023-09-11)
+-------------------
+* [Docs] Fix information about activation and deactivation of chainable controllers (`#1104 <https://github.com/ros-controls/ros2_control/issues/1104>`_) (`#1106 <https://github.com/ros-controls/ros2_control/issues/1106>`_)
+* Contributors: mergify[bot]
+
+2.30.0 (2023-08-14)
+-------------------
+* [CM] Fixes the issue with individual controller's update rate (`#1082 <https://github.com/ros-controls/ros2_control/issues/1082>`_) (`#1097 <https://github.com/ros-controls/ros2_control/issues/1097>`_)
+* Contributors: Sai Kishor Kothakota
+
+2.29.0 (2023-07-09)
+-------------------
+* [CM] Make error message after trying to active controller more informative. (`#1066 <https://github.com/ros-controls/ros2_control/issues/1066>`_) (`#1072 <https://github.com/ros-controls/ros2_control/issues/1072>`_)
+* added controller manager runner to have update cycles (`#1075 <https://github.com/ros-controls/ros2_control/issues/1075>`_) (`#1076 <https://github.com/ros-controls/ros2_control/issues/1076>`_)
+* Fix equal and higher controller update rate (backport `#1070 <https://github.com/ros-controls/ros2_control/issues/1070>`_) (`#1071 <https://github.com/ros-controls/ros2_control/issues/1071>`_)
+* Contributors: Sai Kishor Kothakota, Dr Denis
+
+2.28.0 (2023-06-23)
+-------------------
+
+2.27.0 (2023-06-14)
+-------------------
+* Docs: Use branch name substitution for all links (backport `#1031 <https://github.com/ros-controls/ros2_control/issues/1031>`_) (`#1042 <https://github.com/ros-controls/ros2_control/issues/1042>`_)
+* [Humble] enable ReflowComments to also use ColumnLimit on comments (`#1038 <https://github.com/ros-controls/ros2_control/issues/1038>`_)
+* controller_manager_srvs tests: Add text to assertions (backport `#1023 <https://github.com/ros-controls/ros2_control/issues/1023>`_) (`#1029 <https://github.com/ros-controls/ros2_control/issues/1029>`_)
+* Contributors: Sai Kishor Kothakota, Christoph Fröhlich, Bence Magyar, Felix Exner
+
+2.26.0 (2023-05-20)
+-------------------
+* Revert "Add diagnostics (`#1015 <https://github.com/ros-controls/ros2_control/issues/1015>`_) #abi-breaking
+* Fix GitHub link on control.ros.org (`#1022 <https://github.com/ros-controls/ros2_control/issues/1022>`_) (`#1024 <https://github.com/ros-controls/ros2_control/issues/1024>`_)
+* Contributors: Joseph Schornak, Christoph Fröhlich
+
+2.25.3 (2023-04-29)
+-------------------
+
+2.25.2 (2023-04-20)
+-------------------
+
 2.25.1 (2023-04-14)
 -------------------
 

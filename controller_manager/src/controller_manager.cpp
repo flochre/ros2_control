@@ -147,8 +147,7 @@ ControllerManager::ControllerManager(
     kControllerInterfaceNamespace, kControllerInterfaceClassName)),
   chainable_loader_(
     std::make_shared<pluginlib::ClassLoader<controller_interface::ChainableControllerInterface>>(
-      kControllerInterfaceNamespace, kChainableControllerInterfaceClassName)),
-  diagnostics_updater_(this)
+      kControllerInterfaceNamespace, kChainableControllerInterfaceClassName))
 {
   if (!get_parameter("update_rate", update_rate_))
   {
@@ -164,9 +163,6 @@ ControllerManager::ControllerManager(
 
   init_resource_manager(robot_description);
 
-  diagnostics_updater_.setHardwareID("ros2_control");
-  diagnostics_updater_.add(
-    "Controllers Activity", this, &ControllerManager::controller_activity_diagnostic_callback);
   init_services();
 }
 
@@ -181,16 +177,12 @@ ControllerManager::ControllerManager(
     kControllerInterfaceNamespace, kControllerInterfaceClassName)),
   chainable_loader_(
     std::make_shared<pluginlib::ClassLoader<controller_interface::ChainableControllerInterface>>(
-      kControllerInterfaceNamespace, kChainableControllerInterfaceClassName)),
-  diagnostics_updater_(this)
+      kControllerInterfaceNamespace, kChainableControllerInterfaceClassName))
 {
   if (!get_parameter("update_rate", update_rate_))
   {
     RCLCPP_WARN(get_logger(), "'update_rate' parameter not set, using default value.");
   }
-  diagnostics_updater_.setHardwareID("ros2_control");
-  diagnostics_updater_.add(
-    "Controllers Activity", this, &ControllerManager::controller_activity_diagnostic_callback);
   init_services();
 }
 
@@ -476,6 +468,31 @@ controller_interface::return_type ControllerManager::configure_controller(
       get_logger(), "After configuring, controller '%s' is in state '%s' , expected inactive.",
       controller_name.c_str(), new_state.label().c_str());
     return controller_interface::return_type::ERROR;
+  }
+
+  const auto controller_update_rate = controller->get_update_rate();
+  const auto cm_update_rate = get_update_rate();
+  if (controller_update_rate > cm_update_rate)
+  {
+    RCLCPP_WARN(
+      get_logger(),
+      "The controller : %s update rate : %d Hz should be less than or equal to controller "
+      "manager's update rate : %d Hz!. The controller will be updated at controller_manager's "
+      "update rate.",
+      controller_name.c_str(), controller_update_rate, cm_update_rate);
+  }
+  else if (controller_update_rate != 0 && cm_update_rate % controller_update_rate != 0)
+  {
+    // NOTE: The following computation is done to compute the approx controller update that can be
+    // achieved w.r.t to the CM's update rate. This is done this way to take into account the
+    // unsigned integer division.
+    const auto act_ctrl_update_rate = cm_update_rate / (cm_update_rate / controller_update_rate);
+    RCLCPP_WARN(
+      get_logger(),
+      "The controller : %s update rate : %d Hz is not a perfect divisor of the controller "
+      "manager's update rate : %d Hz!. The controller will be updated with nearest divisor's "
+      "update rate which is : %d Hz.",
+      controller_name.c_str(), controller_update_rate, cm_update_rate, act_ctrl_update_rate);
   }
 
   // CHAINABLE CONTROLLERS: get reference interfaces from chainable controllers
@@ -1254,8 +1271,11 @@ void ControllerManager::activate_controllers(
     if (new_state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
     {
       RCLCPP_ERROR(
-        get_logger(), "After activating, controller '%s' is in state '%s', expected Active",
-        controller->get_node()->get_name(), new_state.label().c_str());
+        get_logger(),
+        "After activation, controller '%s' is in state '%s' (%d), expected '%s' (%d).",
+        controller->get_node()->get_name(), new_state.label().c_str(), new_state.id(),
+        hardware_interface::lifecycle_state_names::ACTIVE,
+        lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE);
     }
   }
   // All controllers activated, switching done
@@ -1342,11 +1362,17 @@ void ControllerManager::list_controllers_srv_cb(
         }
       }
       // check reference interfaces only if controller is inactive or active
-      auto references = controllers[i].c->export_reference_interfaces();
-      controller_state.reference_interfaces.reserve(references.size());
-      for (const auto & reference : references)
+      if (controllers[i].c->is_chainable())
       {
-        controller_state.reference_interfaces.push_back(reference.get_interface_name());
+        auto references =
+          resource_manager_->get_controller_reference_interface_names(controllers[i].info.name);
+        controller_state.reference_interfaces.reserve(references.size());
+        for (const auto & reference : references)
+        {
+          const std::string prefix_name = controllers[i].c->get_node()->get_name();
+          const std::string interface_name = reference.substr(prefix_name.size() + 1);
+          controller_state.reference_interfaces.push_back(interface_name);
+        }
       }
     }
     response->controller.push_back(controller_state);
@@ -1774,9 +1800,12 @@ controller_interface::return_type ControllerManager::update(
     if (is_controller_active(*loaded_controller.c))
     {
       const auto controller_update_rate = loaded_controller.c->get_update_rate();
+      const auto controller_update_factor =
+        (controller_update_rate == 0) || (controller_update_rate >= update_rate_)
+          ? 1u
+          : update_rate_ / controller_update_rate;
 
-      bool controller_go =
-        controller_update_rate == 0 || ((update_loop_counter_ % controller_update_rate) == 0);
+      bool controller_go = ((update_loop_counter_ % controller_update_factor) == 0);
       RCLCPP_DEBUG(
         get_logger(), "update_loop_counter: '%d ' controller_go: '%s ' controller_name: '%s '",
         update_loop_counter_, controller_go ? "True" : "False",
@@ -1793,7 +1822,7 @@ controller_interface::return_type ControllerManager::update(
       if (!controller_skip && controller_go)
       {
         auto controller_ret = loaded_controller.c->update(
-          time, (controller_update_rate != update_rate_ && controller_update_rate != 0)
+          time, (controller_update_factor != 1u)
                   ? rclcpp::Duration::from_seconds(1.0 / controller_update_rate)
                   : period);
 
@@ -2160,31 +2189,5 @@ controller_interface::return_type ControllerManager::check_preceeding_controller
   }
   return controller_interface::return_type::OK;
 };
-
-void ControllerManager::controller_activity_diagnostic_callback(
-  diagnostic_updater::DiagnosticStatusWrapper & stat)
-{
-  // lock controllers
-  std::lock_guard<std::recursive_mutex> guard(rt_controllers_wrapper_.controllers_lock_);
-  const std::vector<ControllerSpec> & controllers = rt_controllers_wrapper_.get_updated_list(guard);
-  bool all_active = true;
-  for (size_t i = 0; i < controllers.size(); ++i)
-  {
-    if (!is_controller_active(controllers[i].c))
-    {
-      all_active = false;
-    }
-    stat.add(controllers[i].info.name, controllers[i].c->get_state().label());
-  }
-
-  if (all_active)
-  {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "All controllers are active");
-  }
-  else
-  {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Not all controllers are active");
-  }
-}
 
 }  // namespace controller_manager

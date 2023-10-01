@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "hardware_interface/component_parser.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rcutils/logging_macros.h"
 
@@ -61,8 +62,7 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
   auto it = info_.hardware_parameters.find("mock_sensor_commands");
   if (it != info_.hardware_parameters.end())
   {
-    // TODO(anyone): change this to parse_bool() (see ros2_control#339)
-    use_mock_sensor_command_interfaces_ = it->second == "true" || it->second == "True";
+    use_mock_sensor_command_interfaces_ = hardware_interface::parse_bool(it->second);
   }
   else
   {
@@ -70,7 +70,7 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
     it = info_.hardware_parameters.find("fake_sensor_commands");
     if (it != info_.hardware_parameters.end())
     {
-      use_mock_sensor_command_interfaces_ = it->second == "true" || it->second == "True";
+      use_mock_sensor_command_interfaces_ = hardware_interface::parse_bool(it->second);
       RCUTILS_LOG_WARN_NAMED(
         "mock_generic_system",
         "Parameter 'fake_sensor_commands' has been deprecated from usage. Use"
@@ -82,16 +82,40 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
     }
   }
 
-  // check if to create fake command interface for gpio
-  it = info_.hardware_parameters.find("fake_gpio_commands");
+  // check if to create mock command interface for gpio
+  it = info_.hardware_parameters.find("mock_gpio_commands");
   if (it != info_.hardware_parameters.end())
   {
-    // TODO(anyone): change this to parse_bool() (see ros2_control#339)
-    use_fake_gpio_command_interfaces_ = it->second == "true" || it->second == "True";
+    use_mock_gpio_command_interfaces_ = hardware_interface::parse_bool(it->second);
   }
   else
   {
-    use_fake_gpio_command_interfaces_ = false;
+    // check if fake_gpio_commands was set instead and issue warning
+    it = info_.hardware_parameters.find("fake_gpio_commands");
+    if (it != info_.hardware_parameters.end())
+    {
+      use_mock_gpio_command_interfaces_ = hardware_interface::parse_bool(it->second);
+      RCUTILS_LOG_WARN_NAMED(
+        "mock_generic_system",
+        "Parameter 'fake_gpio_commands' has been deprecated from usage. Use"
+        "'mock_gpio_commands' instead.");
+    }
+    else
+    {
+      use_mock_gpio_command_interfaces_ = false;
+    }
+  }
+
+  // check if there is parameter that disables commands
+  // this way we simulate disconnected driver
+  it = info_.hardware_parameters.find("disable_commands");
+  if (it != info.hardware_parameters.end())
+  {
+    command_propagation_disabled_ = hardware_interface::parse_bool(it->second);
+  }
+  else
+  {
+    command_propagation_disabled_ = false;
   }
 
   // process parameters about state following
@@ -112,7 +136,7 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
   index_custom_interface_with_following_offset_ = std::numeric_limits<size_t>::max();
 
   // Initialize storage for standard interfaces
-  initialize_storage_vectors(joint_commands_, joint_states_, standard_interfaces_);
+  initialize_storage_vectors(joint_commands_, joint_states_, standard_interfaces_, info_.joints);
   // set all values without initial values to 0
   for (auto i = 0u; i < info_.joints.size(); i++)
   {
@@ -164,7 +188,7 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
   }
 
   // Initialize storage for non-standard interfaces
-  initialize_storage_vectors(other_commands_, other_states_, other_interfaces_);
+  initialize_storage_vectors(other_commands_, other_states_, other_interfaces_, info_.joints);
 
   // when following offset is used on custom interface then find its index
   if (!custom_interface_with_following_offset_.empty())
@@ -201,7 +225,8 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
       }
     }
   }
-  initialize_storage_vectors(sensor_fake_commands_, sensor_states_, sensor_interfaces_);
+  initialize_storage_vectors(
+    sensor_mock_commands_, sensor_states_, sensor_interfaces_, info_.sensors);
 
   // search for gpio interfaces
   for (const auto & gpio : info_.gpios)
@@ -213,15 +238,15 @@ CallbackReturn GenericSystem::on_init(const hardware_interface::HardwareInfo & i
     populate_non_standard_interfaces(gpio.state_interfaces, gpio_interfaces_);
   }
 
-  // Fake gpio command interfaces
-  if (use_fake_gpio_command_interfaces_)
+  // Mock gpio command interfaces
+  if (use_mock_gpio_command_interfaces_)
   {
-    initialize_storage_vectors(gpio_fake_commands_, gpio_states_, gpio_interfaces_);
+    initialize_storage_vectors(gpio_mock_commands_, gpio_states_, gpio_interfaces_, info_.gpios);
   }
   // Real gpio command interfaces
   else
   {
-    initialize_storage_vectors(gpio_commands_, gpio_states_, gpio_interfaces_);
+    initialize_storage_vectors(gpio_commands_, gpio_states_, gpio_interfaces_, info_.gpios);
   }
 
   return CallbackReturn::SUCCESS;
@@ -296,22 +321,22 @@ std::vector<hardware_interface::CommandInterface> GenericSystem::export_command_
     }
   }
 
-  // Fake sensor command interfaces
+  // Mock sensor command interfaces
   if (use_mock_sensor_command_interfaces_)
   {
     if (!populate_interfaces(
-          info_.sensors, sensor_interfaces_, sensor_fake_commands_, command_interfaces, true))
+          info_.sensors, sensor_interfaces_, sensor_mock_commands_, command_interfaces, true))
     {
       throw std::runtime_error(
         "Interface is not found in the standard nor other list. This should never happen!");
     }
   }
 
-  // Fake gpio command interfaces (consider all state interfaces for command interfaces)
-  if (use_fake_gpio_command_interfaces_)
+  // Mock gpio command interfaces (consider all state interfaces for command interfaces)
+  if (use_mock_gpio_command_interfaces_)
   {
     if (!populate_interfaces(
-          info_.gpios, gpio_interfaces_, gpio_fake_commands_, command_interfaces, true))
+          info_.gpios, gpio_interfaces_, gpio_mock_commands_, command_interfaces, true))
     {
       throw std::runtime_error(
         "Interface is not found in the gpio list. This should never happen!");
@@ -333,6 +358,13 @@ std::vector<hardware_interface::CommandInterface> GenericSystem::export_command_
 
 return_type GenericSystem::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
+  if (command_propagation_disabled_)
+  {
+    RCUTILS_LOG_WARN_NAMED(
+      "mock_generic_system", "Command propagation is disabled - no values will be returned!");
+    return return_type::OK;
+  }
+
   auto mirror_command_to_state = [](auto & states_, auto commands_, size_t start_index = 0)
   {
     for (size_t i = start_index; i < states_.size(); ++i)
@@ -390,13 +422,13 @@ return_type GenericSystem::read(const rclcpp::Time & /*time*/, const rclcpp::Dur
 
   if (use_mock_sensor_command_interfaces_)
   {
-    mirror_command_to_state(sensor_states_, sensor_fake_commands_);
+    mirror_command_to_state(sensor_states_, sensor_mock_commands_);
   }
 
   // do loopback on all gpio interfaces
-  if (use_fake_gpio_command_interfaces_)
+  if (use_mock_gpio_command_interfaces_)
   {
-    mirror_command_to_state(gpio_states_, gpio_fake_commands_);
+    mirror_command_to_state(gpio_states_, gpio_mock_commands_);
   }
   else
   {
@@ -425,23 +457,24 @@ bool GenericSystem::get_interface(
 
 void GenericSystem::initialize_storage_vectors(
   std::vector<std::vector<double>> & commands, std::vector<std::vector<double>> & states,
-  const std::vector<std::string> & interfaces)
+  const std::vector<std::string> & interfaces,
+  const std::vector<hardware_interface::ComponentInfo> & component_infos)
 {
   // Initialize storage for all joints, regardless of their existence
   commands.resize(interfaces.size());
   states.resize(interfaces.size());
   for (auto i = 0u; i < interfaces.size(); i++)
   {
-    commands[i].resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
-    states[i].resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
+    commands[i].resize(component_infos.size(), std::numeric_limits<double>::quiet_NaN());
+    states[i].resize(component_infos.size(), std::numeric_limits<double>::quiet_NaN());
   }
 
   // Initialize with values from URDF
   bool print_hint = false;
-  for (auto i = 0u; i < info_.joints.size(); i++)
+  for (auto i = 0u; i < component_infos.size(); i++)
   {
-    const auto & joint = info_.joints[i];
-    for (const auto & interface : joint.state_interfaces)
+    const auto & component = component_infos[i];
+    for (const auto & interface : component.state_interfaces)
     {
       auto it = std::find(interfaces.begin(), interfaces.end(), interface.name);
 
@@ -458,8 +491,8 @@ void GenericSystem::initialize_storage_vectors(
         else
         {
           // Initialize the value in old way with warning message
-          auto it2 = joint.parameters.find("initial_" + interface.name);
-          if (it2 != joint.parameters.end())
+          auto it2 = component.parameters.find("initial_" + interface.name);
+          if (it2 != component.parameters.end())
           {
             states[index][i] = std::stod(it2->second);
             print_hint = true;

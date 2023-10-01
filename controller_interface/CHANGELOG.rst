@@ -2,6 +2,34 @@
 Changelog for package controller_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.31.0 (2023-09-11)
+-------------------
+* add a broadcaster for range sensor (`#1091 <https://github.com/ros-controls/ros2_control/issues/1091>`_) (`#1100 <https://github.com/ros-controls/ros2_control/issues/1100>`_)
+* Contributors: flochre
+
+2.30.0 (2023-08-14)
+-------------------
+
+2.29.0 (2023-07-09)
+-------------------
+
+2.28.0 (2023-06-23)
+-------------------
+
+2.27.0 (2023-06-14)
+-------------------
+* [Humble] enable ReflowComments to also use ColumnLimit on comments (`#1038 <https://github.com/ros-controls/ros2_control/issues/1038>`_)
+* Contributors: Sai Kishor Kothakota
+
+2.26.0 (2023-05-20)
+-------------------
+
+2.25.3 (2023-04-29)
+-------------------
+
+2.25.2 (2023-04-20)
+-------------------
+
 2.25.1 (2023-04-14)
 -------------------
 * Add missing build_export_depends to controller_interface (backport `#989 <https://github.com/ros-controls/ros2_control/issues/989>`_) (`#990 <https://github.com/ros-controls/ros2_control/issues/990>`_)
