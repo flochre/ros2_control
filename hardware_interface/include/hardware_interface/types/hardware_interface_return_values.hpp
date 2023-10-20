@@ -24,6 +24,7 @@ enum class return_type : std::uint8_t
   OK = 0,
   ERROR = 1,
   DEACTIVATE = 2,
+  REACTIVATE = 3,
 };
 
 }  // namespace hardware_interface
